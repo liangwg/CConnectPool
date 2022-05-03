@@ -50,6 +50,11 @@ void* threadFunc2(void* pNum)
 
 int main()
 {
+    /*wgl_wt: 为啥，在主线程中初始化实例化，在子线程中可以访问到？
+      wgl: 这个问题问的好，主线程中对连接池进行实例化+初始化，指向该实例化对象的是类的静态成员变量指针s_pInstance，而静态的都是和类进行绑定的。
+      只要本身不销毁，其他地方是直接可以用类名来访问该静态成员的。
+      在函数实现上通过静态成员函数访问指向实例化对象的s_pInstance，再通过s_pInstance来访问非静态成员函数和非静态成员变量。秒啊，记录的点！edit
+     */
     //主线程中调用初始化连接池函数
     CConnectPool::CreatePool();
     pthread_t threads[15];
