@@ -26,6 +26,7 @@ CConnectPool::CConnectPool()
     }
 }
 
+
 CConnectPool::~CConnectPool()
 {
     pthread_mutex_destroy(&m_mutex);
@@ -47,6 +48,7 @@ CConnectPool::~CConnectPool()
 }
 
 
+//实例化连接池对象
 void CConnectPool::CreatePool()
 {
     if(NULL == s_pInstance)
@@ -64,6 +66,13 @@ void CConnectPool::FreePool()
     }
 }
 
+
+/*wgl
+-------------------------
+MYSQL* GetConnect()函数
+功能：该函数就是非静态成员函数_GetConnect()非阻塞连接的静态成员函数，提供给外界调用的接口
+------------------------
+*/
 MYSQL* CConnectPool::GetConnect()
 {
     return s_pInstance->_GetConnect(false);
@@ -79,6 +88,13 @@ void CConnectPool::PutConnect(MYSQL*pConn)
     s_pInstance->_PutConnect(pConn);
 }
 
+
+/*wgl
+-----------------------------
+MYSQL* CConectPool::_CreateConnect()函数说明
+功能：和Mysql建立连接
+----------------------------
+*/
 MYSQL* CConnectPool::_CreateConnect()
 {
     MYSQL* pConn = new MYSQL;
@@ -92,12 +108,29 @@ MYSQL* CConnectPool::_CreateConnect()
     return pConn;
 }
 
+/*wgl
+-------------------------------
+MYSQL* CConnectPool::_GetConnect(bool bTry)函数功能说明
+参数bTry: 这里的bTry=true表示没有空闲时阻塞_GetConnect()函数并等待，直到有空闲连接被唤醒
+功能: 分配可用的空闲连接
+返回值：返回可用的空闲连接
+------------------------------
+
+从m_queueFree中获取可用连接，
+如果有，则返回可用连接
+如果没有，则判断是否m_queueFree.size()+m_setbusy.size()<MYSQL_POOL_MAX_CONNECT，
+        如果否，则创建新的Mysql连接并加入到m_setbusy中，并返回创建的该连接
+        如果是，则根据bTry来决定是等待还是直接返回
+
+*/
 MYSQL* CConnectPool::_GetConnect(bool bTry)
 {
+    
     static bool bCheck;
     MYSQL *pRet = NULL;
     pthread_mutex_lock(&m_mutex);
     //取出来还要检查一下是否能正常使用
+    //wgl:这里的bCheck是什么意思？
     bCheck = true;
     if(m_queueFree.size()>0)
     {
@@ -128,6 +161,7 @@ MYSQL* CConnectPool::_GetConnect(bool bTry)
         }
     }
     //检查连接是否可用
+    //wgl:这里为什么要检查连接是否可用？好像是阻塞等待结束的话，才会运行这个，
     if(NULL != pRet && true == bCheck && 0 != mysql_ping(pRet))
     {
         mysql_close(pRet);
@@ -142,6 +176,16 @@ MYSQL* CConnectPool::_GetConnect(bool bTry)
     return pRet;
 }
 
+
+/*wgl
+----------------------------
+void CConnectPool::_PutConnect(MYSQL* pConn)函数说明
+参数pConn: 
+功能: 将已经使用完的数据库连接pConn从m_setBusy集合中加入到m_queueFree队列，同时==1时唤醒被条件变量休眠的线程
+-------------------------------
+
+
+*/
 void CConnectPool::_PutConnect(MYSQL* pConn)
 {
     if(NULL == pConn)
