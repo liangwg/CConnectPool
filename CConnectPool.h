@@ -81,10 +81,10 @@ private:
     MYSQL* _CreateConnect();
 
     static CConnectPool* s_pInstance;
-    std::queue<MYSQL*> m_queueFree;//空闲队列
-    std::set<MYSQL*> m_setBusy;//繁忙队列 ，这里的繁忙队列为什么采用set，其实直观上不叫繁忙队列，而是繁忙集合，因为每个正在被使用的数据库连接随时都有可能释放连接
-    pthread_mutex_t m_mutex;
-    pthread_cond_t m_cond;
+    std::queue<MYSQL*> m_queueFree;//空闲连接队列
+    std::set<MYSQL*> m_setBusy;//被占用连接集 ，每个正在被使用的数据库连接随时都有可能释放连接
+    pthread_mutex_t m_mutex;//为什么只用一个m_mutex?这个m_mutex是针对m_queueFree和m_setBusy的，两个一起操作，条件的判断也是和这两个有关
+    pthread_cond_t m_cond;  //用m_cond的原因：连接池的连接数达到最大时，想获取连接的线程和准备释放连接的线程构成条件变量组，
 };
 
 #endif
