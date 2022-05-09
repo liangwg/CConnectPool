@@ -8,7 +8,7 @@
 
 void* threadFunc1(void* pNum)
 {
-    //调用阻塞函数从连接池取一个连接，占用15秒钟后释放
+    //调用阻塞函数从连接池取一个连接，占用10秒钟后释放
     MYSQL *pConn = CConnectPool::GetConnect();
     if(pConn)
     {
